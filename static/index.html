@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Content-Security-Policy" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="t">Home</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+</head>
+
+<body class="center">
+  <!-- Safari-like navigation bar -->
+  <nav class="browser-nav">
+    <div class="nav-controls">
+      <button id="back-btn" class="nav-btn" title="戻る" onclick="goBack()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <button id="forward-btn" class="nav-btn" title="進む" onclick="goForward()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </button>
+      <button id="refresh-btn" class="nav-btn" title="更新" onclick="refreshPage()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 4V10H7M23 20V14H17"/>
+          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M22.88 14.36A9 9 0 0 1 8.51 18.64L23 14"/>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="address-bar-container">
+      <input
+        type="text"
+        id="address-bar"
+        class="address-bar"
+        placeholder="検索またはURLを入力..."
+        onkeypress="handleAddressBarEnter(event)"
+      />
+      <button id="go-btn" class="go-btn" onclick="navigateToUrl()">→</button>
+    </div>
+    
+    <div class="nav-actions">
+      <button id="home-btn" class="nav-btn" title="ホーム" onclick="goHome()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9L12 2L21 9V20A2 2 0 0 1 19 22H5A2 2 0 0 1 3 20V9Z"/>
+          <polyline points="9,22 9,12 15,12 15,22"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+  
+  <div class="container">
+    <h1>Loading...</h1>
+  </div>
+  <script src="assets/js/005.js?v=000"></script>
+  <script src="./assets/js/js-injection.js"></script>
+  <script src="./assets/mathematics/bundle.js?v=2025-06-01"></script>
+  <script src="./assets/mathematics/config.js?v=2025-06-01"></script>
+</body>
+
+</html>

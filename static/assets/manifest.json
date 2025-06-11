@@ -1,0 +1,12 @@
+{
+    "name": "AIBrowser",
+    "short_name": "AIBrowser",
+    "description": "AIBrowser is a web browser that uses AI to enhance your browsing experience.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1a1a1a",
+    "theme_color": "#667eea",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "ja"
+}
