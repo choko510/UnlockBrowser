@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Content-Security-Policy" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="t">Interstellar Proxy</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      overflow: hidden;
+    }
+    
+    .proxy-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    
+    .url-bar {
+      background: #2d2d2d;
+      padding: 12px;
+      border-bottom: 1px solid #444;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .nav-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .nav-btn {
+      background: #2d3748;
+      border: none;
+      color: white;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .nav-btn:hover:not(:disabled) {
+      background: #4a5568;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .nav-btn:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    
+    .nav-btn:disabled {
+      background: #1a202c;
+      color: #4a5568;
+      cursor: not-allowed;
+      opacity: 0.6;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .nav-btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+      transition: all 0.3s ease;
+      transform: translate(-50%, -50%);
+    }
+    
+    .nav-btn:hover:not(:disabled)::before {
+      width: 100px;
+      height: 100px;
+    }
+    
+    .url-input {
+      flex: 1;
+      background: #1a202c;
+      border: 2px solid #2d3748;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 16px;
+      outline: none;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .url-input:focus {
+      border-color: #667eea;
+      background: #2d3748;
+      box-shadow:
+        inset 0 2px 4px rgba(0,0,0,0.1),
+        0 0 0 3px rgba(102, 126, 234, 0.1);
+      transform: translateY(-1px);
+    }
+    
+    .url-input::placeholder {
+      color: #a0aec0;
+      opacity: 0.8;
+    }
+    
+    .go-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .go-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+    
+    .go-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+    }
+    
+    .go-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    .go-btn:hover::before {
+      left: 100%;
+    }
+    
+    .iframe-container {
+      flex: 1;
+      position: relative;
+      background: white;
+    }
+    
+    .proxy-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: white;
+    }
+    
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #666;
+      font-size: 18px;
+    }
+    
+    .error-message {
+      background: #ff4444;
+      color: white;
+      padding: 10px;
+      margin: 10px;
+      border-radius: 6px;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="proxy-container">
+    <div class="url-bar">
+      <div class="nav-buttons">
+        <button class="nav-btn" id="back-btn" onclick="goBack()" disabled>←</button>
+        <button class="nav-btn" id="forward-btn" onclick="goForward()" disabled>→</button>
+        <button class="nav-btn" id="refresh-btn" onclick="refresh()">⟲</button>
+        <button class="nav-btn" id="ai-btn" onclick="openAIChat()">AI質問</button>
+      </div>
+      <input type="text" class="url-input" id="url-input" placeholder="URLまたは検索語句を入力..." value="https://google.com">
+      <button class="go-btn" onclick="navigate()">移動</button>
+    </div>
+    
+    <div class="error-message" id="error-message"></div>
+    
+    <div class="iframe-container">
+      <div class="loading" id="loading">読み込み中...</div>
+      <iframe class="proxy-iframe" id="proxy-iframe" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation-by-user-activation"></iframe>
+    </div>
+  </div>
+
+  <script src="./assets/mathematics/bundle.js?v=2025-06-01"></script>
+  <script src="./assets/mathematics/config.js?v=2025-06-01"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dom-to-image-more@3.6.0/dist/dom-to-image-more.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/dom-to-image-more@3.6.0/spec/resources/fonts/web-fonts/embedded.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/winbox@0.2.82/dist/winbox.bundle.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/winbox@0.2.82/dist/css/winbox.min.css" rel="stylesheet">
+
+  <script>
+    // Service Workerをiframeプロキシ用に登録
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js?v=2025-06-01', {
+          scope: '/'
+        }).then((registration) => {
+          console.log('Service Worker registered for iframe proxy:', registration);
+        }).catch((error) => {
+          console.error('Service Worker registration failed:', error);
+        });
+      });
+    }
+
+    function setupRightClickPaint(doc) {
+        const canvas = doc.createElement('canvas');
+        canvas.style.position = 'fixed';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.pointerEvents = 'none';
+        canvas.width = doc.documentElement.clientWidth;
+        canvas.height = doc.documentElement.clientHeight;
+        canvas.style.zIndex = 9999;
+        doc.body.appendChild(canvas);
+
+        const ctx = canvas.getContext('2d');
+        const paintColor = 'red';
+        const brushSize = 3;
+        let isPainting = false;
+
+        doc.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        doc.addEventListener('mousedown', (e) => {
+            if (e.button === 2) {
+                isPainting = true;
+                canvas.style.pointerEvents = 'auto';
+                draw(e);
+            }
+        });
+
+        doc.addEventListener('mouseup', (e) => {
+            if (e.button === 2) {
+                isPainting = false;
+                canvas.style.pointerEvents = 'none';
+            }
+        });
+
+        doc.addEventListener('mousemove', (e) => {
+            if (isPainting) draw(e);
+        });
+
+        function draw(e) {
+            const x = e.clientX;
+            const y = e.clientY;
+            ctx.fillStyle = paintColor;
+            ctx.beginPath();
+            ctx.arc(x, y, brushSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // 親ページに適用
+    setupRightClickPaint(document);
+
+    // iframeに適用する関数
+    function applyToIframe(iframe) {
+        try {
+            if (iframe.contentDocument) {
+                setupRightClickPaint(iframe.contentDocument);
+            }
+        } catch (e) {
+            console.warn('iframeにアクセスできません:', e);
+        }
+    }
+
+    // 既存のiframeに適用
+    document.querySelectorAll('iframe').forEach(applyToIframe);
+
+    // iframeの内容が変更された時の監視
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1 && node.tagName === 'IFRAME') {
+                    node.addEventListener('load', () => applyToIframe(node));
+                }
+            });
+        });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // プロキシiframeの読み込み完了を監視
+    const proxyIframe = document.getElementById('proxy-iframe');
+    if (proxyIframe) {
+        proxyIframe.addEventListener('load', () => {
+            applyToIframe(proxyIframe);
+        });
+    }
+
+
+    // AI Chat functionality
+    let chatHistory = []; // チャット履歴を保存
+    
+    function createAIChat() {
+        const winbox = new WinBox({
+            title: "AI Assistant",
+            width: 380,
+            height: 580,
+            x: "right",
+            y: "center"
+        });
+
+        // Create the chat UI dynamically
+        const container = document.createElement('div');
+        container.id = 'ai-chat-container';
+        Object.assign(container.style, {
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            background: '#ffffff',
+            color: '#1a1a1a'
+        });
+
+        // Header - Simple and clean
+        const header = document.createElement('div');
+        Object.assign(header.style, {
+            padding: '20px',
+            borderBottom: '1px solid #e5e7eb',
+            textAlign: 'center'
+        });
+
+        const title = document.createElement('h2');
+        Object.assign(title.style, {
+            margin: '0',
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#374151'
+        });
+        title.textContent = 'AI Assistant';
+
+        const subtitle = document.createElement('p');
+        Object.assign(subtitle.style, {
+            margin: '4px 0 0 0',
+            fontSize: '12px',
+            color: '#9ca3af'
+        });
+        subtitle.textContent = 'テキストや画像について質問してください';
+
+        header.appendChild(title);
+        header.appendChild(subtitle);
+
+        // Chat Messages
+        const chatMessages = document.createElement('div');
+        chatMessages.id = 'chat-messages';
+        Object.assign(chatMessages.style, {
+            flex: '1',
+            padding: '20px',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            background: '#f8fafc'
+        });
+
+        // 既存のチャット履歴を表示
+        if (chatHistory.length === 0) {
+            const welcomeMsg = document.createElement('div');
+            Object.assign(welcomeMsg.style, {
+                background: '#ffffff',
+                padding: '12px 16px',
+                borderRadius: '16px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                maxWidth: '85%',
+                alignSelf: 'flex-start',
+                border: '1px solid #e5e7eb',
+                fontSize: '14px',
+                lineHeight: '1.5'
+            });
+            welcomeMsg.textContent = 'こんにちは！何かお手伝いできることはありますか？';
+            chatMessages.appendChild(welcomeMsg);
+        } else {
+            // 既存の履歴を表示
+            chatHistory.forEach(item => {
+                if (item.type === 'user') {
+                    const userMsg = document.createElement('div');
+                    Object.assign(userMsg.style, {
+                        background: '#3b82f6',
+                        color: 'white',
+                        padding: '12px 16px',
+                        borderRadius: '16px 16px 4px 16px',
+                        maxWidth: '85%',
+                        alignSelf: 'flex-end',
+                        wordWrap: 'break-word',
+                        fontSize: '14px',
+                        lineHeight: '1.5',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    });
+                    
+                    if (item.image) {
+                        const imagePreview = document.createElement('img');
+                        imagePreview.src = item.image;
+                        Object.assign(imagePreview.style, {
+                            maxWidth: '200px',
+                            maxHeight: '200px',
+                            borderRadius: '8px',
+                            marginBottom: '8px',
+                            display: 'block'
+                        });
+                        userMsg.appendChild(imagePreview);
+                    }
+                    
+                    const textPart = document.createElement('div');
+                    textPart.textContent = item.content;
+                    userMsg.appendChild(textPart);
+                    chatMessages.appendChild(userMsg);
+                } else if (item.type === 'ai') {
+                    const aiMsg = document.createElement('div');
+                    Object.assign(aiMsg.style, {
+                        background: '#ffffff',
+                        padding: '12px 16px',
+                        borderRadius: '16px 16px 16px 4px',
+                        maxWidth: '85%',
+                        alignSelf: 'flex-start',
+                        wordWrap: 'break-word',
+                        fontSize: '14px',
+                        lineHeight: '1.5',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                        color: '#374151'
+                    });
+                    aiMsg.textContent = item.content;
+                    chatMessages.appendChild(aiMsg);
+                }
+            });
+        }
+
+        // Input Area
+        const inputArea = document.createElement('div');
+        Object.assign(inputArea.style, {
+            padding: '20px',
+            background: '#ffffff',
+            borderTop: '1px solid #e5e7eb'
+        });
+
+        const inputContainer = document.createElement('div');
+        Object.assign(inputContainer.style, {
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'flex-end',
+            background: '#f1f5f9',
+            borderRadius: '24px',
+            padding: '8px'
+        });
+
+        // 画像アップロード用の隠しinput
+        const imageInput = document.createElement('input');
+        imageInput.type = 'file';
+        imageInput.accept = 'image/*';
+        imageInput.style.display = 'none';
+        imageInput.id = 'image-input';
+
+        // 画像アップロードボタン
+        const imageBtn = document.createElement('button');
+        imageBtn.textContent = '📎';
+        imageBtn.title = '画像をアップロード';
+        Object.assign(imageBtn.style, {
+            background: 'transparent',
+            border: 'none',
+            borderRadius: '50%',
+            width: '36px',
+            height: '36px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+            transition: 'all 0.2s ease',
+            color: '#6b7280'
+        });
+
+        const chatInput = document.createElement('textarea');
+        chatInput.id = 'chat-input';
+        chatInput.placeholder = 'メッセージを入力...';
+        Object.assign(chatInput.style, {
+            flex: '1',
+            background: 'transparent',
+            border: 'none',
+            borderRadius: '0',
+            padding: '8px 12px',
+            resize: 'none',
+            maxHeight: '100px',
+            fontFamily: 'inherit',
+            fontSize: '14px',
+            color: '#374151',
+            outline: 'none',
+            lineHeight: '1.5'
+        });
+
+        const sendBtn = document.createElement('button');
+        sendBtn.id = 'send-btn';
+        sendBtn.textContent = '→';
+        Object.assign(sendBtn.style, {
+            background: '#3b82f6',
+            border: 'none',
+            borderRadius: '50%',
+            width: '36px',
+            height: '36px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: 'white',
+            transition: 'all 0.2s ease'
+        });
+
+        // 画像ボタンのホバーエフェクト
+        imageBtn.addEventListener('mouseover', () => {
+            imageBtn.style.background = '#e2e8f0';
+            imageBtn.style.color = '#374151';
+        });
+        imageBtn.addEventListener('mouseout', () => {
+            imageBtn.style.background = 'transparent';
+            imageBtn.style.color = '#6b7280';
+        });
+
+        // 送信ボタンのホバーエフェクト
+        sendBtn.addEventListener('mouseover', () => {
+            sendBtn.style.background = '#2563eb';
+            sendBtn.style.transform = 'scale(1.05)';
+        });
+        sendBtn.addEventListener('mouseout', () => {
+            sendBtn.style.background = '#3b82f6';
+            sendBtn.style.transform = 'scale(1)';
+        });
+
+        // 画像ボタンのクリックイベント
+        imageBtn.addEventListener('click', () => {
+            imageInput.click();
+        });
+
+        // 画像選択時のイベント
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                sendImageToAI(file, chatInput.value.trim() || '画像について説明してください');
+                chatInput.value = '';
+                chatInput.style.height = 'auto';
+            }
+        });
+
+        inputContainer.appendChild(imageBtn);
+        inputContainer.appendChild(chatInput);
+        inputContainer.appendChild(sendBtn);
+        inputArea.appendChild(imageInput);
+        inputArea.appendChild(inputContainer);
+
+        // Assemble the UI
+        container.appendChild(header);
+        container.appendChild(chatMessages);
+        container.appendChild(inputArea);
+
+        // Set the content to WinBox
+        winbox.body.appendChild(container);
+
+        // Add functionality
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // チャット履歴にユーザーメッセージを保存
+            chatHistory.push({
+                type: 'user',
+                content: message,
+                timestamp: new Date()
+            });
+
+            // Add user message
+            const userMsg = document.createElement('div');
+            Object.assign(userMsg.style, {
+                background: '#3b82f6',
+                color: 'white',
+                padding: '12px 16px',
+                borderRadius: '16px 16px 4px 16px',
+                maxWidth: '85%',
+                alignSelf: 'flex-end',
+                wordWrap: 'break-word',
+                fontSize: '14px',
+                lineHeight: '1.5',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            });
+            userMsg.textContent = message;
+            chatMessages.appendChild(userMsg);
+
+            // Clear input
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // AI response
+            const aiMsg = document.createElement('div');
+            Object.assign(aiMsg.style, {
+                background: '#ffffff',
+                padding: '12px 16px',
+                borderRadius: '16px 16px 16px 4px',
+                maxWidth: '85%',
+                alignSelf: 'flex-start',
+                wordWrap: 'break-word',
+                fontSize: '14px',
+                lineHeight: '1.5',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                color: '#374151'
+            });
+            
+            // AIからのリアルタイムレスポンスを表示
+            aiMsg.textContent = '';
+            chatMessages.appendChild(aiMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // テキストのみの場合のAPI呼び出し
+            sendTextToAI(message, aiMsg);
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Focus input on window open
+        setTimeout(() => chatInput.focus(), 100);
+    }
+
+    // Function to open AI chat from navigation button
+    function openAIChat() {
+        createAIChat();
+    }
+
+    // テキストのみをAIに送信する関数
+    async function sendTextToAI(message, responseElement) {
+        let aiResponse = '';
+        try {
+            // 処理中表示
+            responseElement.textContent = '考え中...';
+
+            // APIリクエストを送信
+            const response = await fetch('/api/text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // ストリーミングレスポンスを処理
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            responseElement.textContent = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                aiResponse += chunk;
+                responseElement.textContent += chunk;
+                
+                // チャットメッセージエリアを下にスクロール
+                const chatMessages = document.getElementById('chat-messages');
+                if (chatMessages) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            }
+
+            // AIの返答をチャット履歴に保存
+            if (aiResponse) {
+                chatHistory.push({
+                    type: 'ai',
+                    content: aiResponse,
+                    timestamp: new Date()
+                });
+            }
+
+        } catch (error) {
+            console.error('AI API Error:', error);
+            const errorMsg = 'エラーが発生しました。Gemini APIキーが正しく設定されているか確認してください。';
+            responseElement.textContent = errorMsg;
+            
+            // エラーメッセージもチャット履歴に保存
+            chatHistory.push({
+                type: 'ai',
+                content: errorMsg,
+                timestamp: new Date()
+            });
+        }
+    }
+
+    // 画像をAIに送信する関数
+    async function sendImageToAI(imageFile, prompt) {
+        const chatMessages = document.getElementById('chat-messages');
+        if (!chatMessages) return;
+
+        // 画像をBase64として保存するためのURL
+        const imageUrl = URL.createObjectURL(imageFile);
+        
+        // チャット履歴にユーザーメッセージ（画像付き）を保存
+        chatHistory.push({
+            type: 'user',
+            content: prompt,
+            image: imageUrl,
+            timestamp: new Date()
+        });
+
+        // ユーザーメッセージを表示（画像プレビュー付き）
+        const userMsg = document.createElement('div');
+        Object.assign(userMsg.style, {
+            background: '#3b82f6',
+            color: 'white',
+            padding: '12px 16px',
+            borderRadius: '16px 16px 4px 16px',
+            maxWidth: '85%',
+            alignSelf: 'flex-end',
+            wordWrap: 'break-word',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        });
+
+        // 画像プレビューを作成
+        const imagePreview = document.createElement('img');
+        imagePreview.src = imageUrl;
+        Object.assign(imagePreview.style, {
+            maxWidth: '200px',
+            maxHeight: '200px',
+            borderRadius: '8px',
+            marginBottom: '8px',
+            display: 'block'
+        });
+        
+        const textPart = document.createElement('div');
+        textPart.textContent = prompt;
+        
+        userMsg.appendChild(imagePreview);
+        userMsg.appendChild(textPart);
+        chatMessages.appendChild(userMsg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // AIレスポンス用の要素を作成
+        const aiMsg = document.createElement('div');
+        Object.assign(aiMsg.style, {
+            background: '#ffffff',
+            padding: '12px 16px',
+            borderRadius: '16px 16px 16px 4px',
+            maxWidth: '85%',
+            alignSelf: 'flex-start',
+            wordWrap: 'break-word',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            color: '#374151'
+        });
+        aiMsg.textContent = '分析中...';
+        chatMessages.appendChild(aiMsg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        let aiResponse = '';
+        try {
+            // FormDataを作成
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            formData.append('prompt', prompt);
+
+            // APIリクエストを送信
+            const response = await fetch('/api/aireq', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // ストリーミングレスポンスを処理
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            aiMsg.textContent = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                aiResponse += chunk;
+                aiMsg.textContent += chunk;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // AIの返答をチャット履歴に保存
+            if (aiResponse) {
+                chatHistory.push({
+                    type: 'ai',
+                    content: aiResponse,
+                    timestamp: new Date()
+                });
+            }
+
+        } catch (error) {
+            console.error('Image AI API Error:', error);
+            const errorMsg = 'エラーが発生しました。画像の解析ができませんでした。';
+            aiMsg.textContent = errorMsg;
+            
+            // エラーメッセージもチャット履歴に保存
+            chatHistory.push({
+                type: 'ai',
+                content: errorMsg,
+                timestamp: new Date()
+            });
+        }
+    }
+  </script>
+  <script src="assets/js/iframe-proxy.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,32 @@
+{
+  "_comment": "JS/CSS Injection Configuration - Edit this file to add custom script and style injections",
+  "_usage": "Set 'enabled' to true to activate an injection rule. Add 'js_urls' for JavaScript files and 'css_urls' for CSS files.",
+  "injections": [
+    {
+      "name": "Custom LoinoNote Script",
+      "url_pattern": "loilonote.app",
+      "js_urls": [
+        "assets/loilonote/custom-loilonote.js",
+        "assets/loilonote/lib/html2canvas.min.js"
+
+      ],
+      "css_urls": [
+        "assets/loilonote/custom-loilonote.css"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Custom LoinoNote Script",
+      "url_pattern": "",
+      "js_urls": [
+        "assets/all/custom.js",
+        "assets/loilonote/lib/html2canvas.min.js",
+        "assets/loilonote/lib/winbox.bundle.min.js"
+      ],
+      "css_urls": [
+        "assets/loilonote/lib/winbox.min.css"
+      ],
+      "enabled": true
+    }
+  ]
+}
